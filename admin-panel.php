@@ -1,110 +1,139 @@
 <?php
 
     include("dataBase.php");
-    include("functions.php");
-
-    if(!isAdminLogin()){
-        header("Location: admin-login.php");
-    }
 
     $error = '';
-    $message = '';
-
-    if(isset($_POST["add-product"])){
-        $formData = array();    
-        if(empty($_POST["itemName"])){
-            $error .= '<li>item Name is Required</li>';
-        }
-        else{
-            $formData['itemName'] = trim($_POST["itemName"]);
-        }
     
-        if(empty($_POST["itemCategory"])){
-            $error .= '<li>Category is Required</li>';
+    if (isset($_POST["add-product"])){
+        $formData = array();
+
+        // name and desc
+        $formData['name'] = $_POST['name'];
+        $formData['description'] = $_POST['description'];
+
+        $data = array(
+            ':name'		=>	$formData['name']
+        );
+
+        $query = "
+            SELECT name FROM products 
+            WHERE name = :name
+        ";
+        $statement = $connection->prepare($query);    
+        $statement->execute($data);
+
+        if($statement->rowCount() > 0){
+            $error = '<li>Product Already Exists Please Edit That From View Products tab for any changes</li>';
         }
         else{
-            $formData['itemCategory'] = trim($_POST["itemCategory"]);
-        }
-
-        if(empty($_POST["totalItems"])){
-            $error .= '<li>No. of Items is Required</li>';
-        }
-        else{
-            $formData['totalItems'] = trim($_POST["totalItems"]);
-        }
-
-        if(empty($_POST["amount"])){
-            $error .= '<li>Amount is Required</li>';
-        }
-        else{
-            $formData['amount'] = trim($_POST["amount"]);
-        }
-
-        if(isset($_FILES['itemImg'])){
-
-            $imgName = $_FILES['itemImg']['name'];
-            $imgType = $_FILES['itemImg']['type'];
-            $tmpName = $_FILES['itemImg']['tmp_name'];
-            $imageSize = $_FILES['itemImg']['size'];
-            $extensions = ["jpeg", "png", "jpg"];
-            if(move_uploaded_file($tmpName, "farmItemsUpload/".$imgName)){
-                $formData['itemImg'] = $imgName;
-            }
-        }
-        else{
-            $error .= "<li>Upload Farm's ingredient Image</li>";
-        }
-    
-        if($error == ''){
             $data = array(
-                ':itemName'		=>	$formData['itemName']
+                ':name' => $formData['name'],
+                ':description' => $formData['description']
             );
-    
+
             $query = "
-            SELECT item_name FROM farm_items 
-            WHERE item_name = :itemName
-            AND farmer_name = '".$_SESSION['userName']."'
+                INSERT into products 
+                (name, description)
+                VALUES (:name, :description)
             ";
-            $statement = $connection->prepare($query);    
+
+            $statement = $connection->prepare($query);
             $statement->execute($data);
 
-            if($statement->rowCount() > 0){
-                $error = '<li>Product Already Exists Please Edit That For Changes</li>';
-            }
-            else{
-                $data = array(
-                    ':itemCategory'		   =>   	$formData['itemCategory'],
-                    ':userName'            =>       $_SESSION['userName'],
-                    ':itemName'			   =>   	$formData['itemName'],
-                    ':totalItems'		   =>   	$formData['totalItems'],
-                    ':amount'		       =>   	$formData['amount'],
-                    ':itemImg'	           =>	    $formData['itemImg'],
-                    ':itemAddedOn'		   =>   	getDateTime($connection)
-                );
-        
-                $query = "
-                    INSERT INTO farm_items 
-                    (item_cat, farmer_name, item_name, total_item, amount, item_pic, item_added_on) 
-                    VALUES (:itemCategory, :userName, :itemName, :totalItems, :amount, :itemImg, :itemAddedOn)
-                ";
-                $statement = $connection->prepare($query);    
-                $statement->execute($data);
+            $product_id = $connection->lastInsertId();
 
-                header('Location:farmerAdditems.php?msg=add');
+            // variants upload for this product
+            $variantSizes = $_POST['variant_size'];
+            $variantCategory = $_POST['variant_category'];
+            $variantColors = $_POST['variant_color'];
+            $variantOriginalPrices = $_POST['variant_original_price'];
+            $variantDiscountedPrices = $_POST['variant_discounted_price'];
+            $variantStocks = $_POST['variant_stocks'];
+
+            for ($i = 0; $i < count($variantSizes); $i++){
+                $size = $variantSizes[$i];
+                $category = $variantCategory[$i];
+                $color = $variantColors[$i];
+                $originalPrice = $variantOriginalPrices[$i];
+                $discountedPrice = $variantDiscountedPrices[$i];
+                $stocks = $variantStocks[$i];
+
+                $varData = array(
+                    ':product_id'       => $product_id,
+                    ':size'             => $size,
+                    ':category'         => $category,
+                    ':color'            => $color,
+                    ':originalPrice'    => $originalPrice,
+                    ':discountedPrice'  => $discountedPrice,
+                    ':stocks'           => $stocks
+                );
+
+                $variantQuery = "
+                    INSERT into product_variants
+                    (product_id, size, category, color, original_price, discounted_price, stocks)
+                    VALUES (:product_id, :size, :category, :color, :originalPrice, :discountedPrice, :stocks)
+                ";
+
+                $variantstmt = $connection->prepare($variantQuery);
+                $variantstmt->execute($varData);
+
+                $variant_id = $connection->lastInsertId();
+
+                // image uploads for this variant
+                $inputName = "variant_images_{$i}";
+                if (isset($_FILES[$inputName])) {
+                    $totalFiles = count($_FILES[$inputName]['name']);
+
+                    for ($j = 0; $j < $totalFiles; $j++) {
+                        $fileName = $_FILES[$inputName]['name'][$j];
+                        $tmpName = $_FILES[$inputName]['tmp_name'][$j];
+
+                        if ($fileName != "") {
+                            $targetDir = "images/variants";
+                            if (!is_dir($targetDir)) {
+                                mkdir($targetDir, 0755, true);
+                            }
+
+                            $uniqueName = time() . "_" . rand(1000,9999) . "_" . basename($fileName);
+                            $targetFilePath = $targetDir . '/' . $uniqueName;
+
+                            if (move_uploaded_file($tmpName, $targetFilePath)) {
+                                $imgData = array(
+                                    ':variant_id' => $variant_id,
+                                    ':product_id' => $product_id,
+                                    ':image_url' => $targetFilePath
+                                );
+
+                                $imgQuery = "
+                                    INSERT INTO variant_images
+                                    (variant_id, product_id, image_url)
+                                    VALUES (:variant_id, :product_id, :image_url)
+                                ";
+
+                                $imgStmt = $connection->prepare($imgQuery);
+                                $imgStmt->execute($imgData);
+
+                                header("Location: admin-panel?msg=add");
+                            }
+                        }
+                    }
+                }
             }
         }
     }
-
 
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - Crabie</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Crabie</title>
+    <link href="asset/css/simple-datatables-style.css" rel="stylesheet" />
+    <link href="asset/css/styles.css" rel="stylesheet" />
+    <script src="asset/js/font-awesome-5-all.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -208,130 +237,325 @@
             background: #000000ff;
             cursor: pointer;
         }
+        .variant-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 0 4px rgba(0,0,0,0.1);
+        }
+        .variant-row input[type="text"],
+        .variant-row input[type="file"] {
+            flex: 1 1 120px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .remove-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .variant-row button {
+            background: red;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .add-var{
+            padding: 8px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .alert-success{
+            padding: 15px 45px 0px 20px;
+            border-radius: 6px;
+            background-color: greenyellow;
+        }
+        .alert-danger{
+            padding: 15px 45px 0px 20px;
+            border-radius: 6px;
+        }
+        .size{
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #CCCCCC;
+        }
+        .admin-btn:hover{
+            color: white;
+            background-color: #4a4a4aff;
+        }
     </style>
 </head>
 <body>
 
-  <div class="admin-header">
-    <h1>Admin Panel - Crabie</h1>
-  </div>
-
-  <div class="admin-container">
-
-    <!-- Toggle Buttons -->
-    <div class="toggle-buttons">
-      <button class="toggle-btn active" onclick="toggleSection('product-list')">View Products</button>
-      <button class="toggle-btn" onclick="toggleSection('add-product')">Add Product</button>
+    <div class="admin-header">
+        <h1>Admin Panel - Crabie</h1>
     </div>
 
-    <!-- Product List -->
-    <div class="admin-section active" id="product-list">
-      <h2>All Products</h2>
-      <table class="product-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Image</th>
-            <th>Name</th>
-            <th>Price</th>
-            <th>Original Price</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Loop here from DB -->
-          <tr>
-            <td>1</td>
-            <td><img src="images/jacket1.png" width="60"></td>
-            <td>Light Blue Jacket</td>
-            <td>₹1999</td>
-            <td>₹1299</td>
-            <td>
-              <button class="admin-btn">Edit</button>
-              <button class="admin-btn">Delete</button>
-            </td>
-          </tr>
-          <!-- End loop -->
-        </tbody>
-      </table>
+    <div class="admin-container">
+
+        <?php
+
+            if(isset($_GET['msg'])){
+
+                // ADD MSG
+    
+                if($_GET['msg'] == 'add'){
+                    echo '
+                        <div class="center">
+                            <div class="alert alert-dismissible fade show alert-success" role="alert">
+                                <ul class="list-unstyled" style="color:black;">New Jacket Added</ul>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        </div>
+                    ';
+                }
+            }
+
+        ?>
+
+        <?php
+            if($error != ''){
+                echo '
+                    <div class="center">
+                        <div class="alert alert-dismissible fade show alert-danger" role="alert">
+                            <ul class="list-unstyled">'.$error.'</ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    </div>
+                ';
+            }
+        ?>
+
+        <!-- Toggle Buttons -->
+        <div class="toggle-buttons">
+        <button class="toggle-btn active" onclick="toggleSection('product-list')">View Products</button>
+        <button class="toggle-btn" onclick="toggleSection('add-product')">Add Product</button>
+        </div>
+
+        <!-- Product List -->
+        <div class="admin-section active" id="product-list">
+            <h2>All Products</h2>
+            <table class="product-table" id="datatablesSimple">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Original Price</th>
+                    <th>Discounted Price</th>
+                    <th>Stocks</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                    <?php
+                        $query = "
+                            SELECT 
+                                p.id AS product_id,
+                                p.name,
+                                vi.image_url,
+                                MIN(v.original_price) AS original_price,
+                                MIN(v.discounted_price) AS discounted_price,
+                                v.stocks
+                            FROM products p
+                            LEFT JOIN product_variants v ON p.id = v.product_id
+                            LEFT JOIN (
+                                SELECT variant_id, MIN(image_url) AS image_url
+                                FROM variant_images
+                                GROUP BY variant_id
+                            ) vi ON v.id = vi.variant_id
+                            GROUP BY p.id
+                            ORDER BY p.id ASC
+                        ";
+                        $stmt = $connection->prepare($query);
+                        $stmt->execute();
+                        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                        foreach ($products as $product) {
+                            echo '
+                            <tr>
+                                <td>
+                                    ' . htmlspecialchars($product['product_id']) . '
+                                </td>
+                                <td>
+                                    <img src="' . htmlspecialchars($product['image_url'] ?? 'images/no-image.png') . '" width="60">
+                                </td>
+                                <td>
+                                    ' . htmlspecialchars($product['name']) . '
+                                </td>
+                                <td>
+                                    ₹' . htmlspecialchars($product['original_price']) . '
+                                </td>
+                                <td>
+                                    ₹' . htmlspecialchars($product['discounted_price']) . '
+                                </td>
+                                <td>
+                                    ' . htmlspecialchars($product['stocks']) . '
+                                </td>
+                                <td>
+                                    <form method="GET" action="admin-actions?action=view" style="display:inline;">
+                                        <input type="hidden" name="id" value="' . $product['product_id'] . '">
+                                        <input type="hidden" name="action" value="view">
+                                        <button type="submit" class="admin-btn">View</button>
+                                    </form>
+                                    <form method="GET" action="admin-actions?action=edit" style="display:inline;">
+                                        <input type="hidden" name="id" value="' . $product['product_id'] . '">
+                                        <input type="hidden" name="action" value="edit">
+                                        <button type="submit" class="admin-btn">Edit</button>
+                                    </form>
+                                    <form method="GET" action="admin-actions?action=delete" style="display:inline;">
+                                        <input type="hidden" name="id" value="' . $product['product_id'] . '">
+                                        <input type="hidden" name="action" value="edit">
+                                        <button type="submit" class="admin-btn">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>';
+                        }
+                    ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add New Product -->
+        <div class="admin-section" id="add-product" style="max-width: 600px; margin: 0 auto;">
+            <h2 style="padding-left: 50px;">Add New Product</h2>
+            <form method="POST" enctype="multipart/form-data" style="padding: 0 50px;" id="productForm">
+                <!-- Basic Info -->
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+
+                <!-- Variants -->
+                <h3>Variants (Category, Size, Color, Price)</h3>
+                <div id="variant-wrapper">
+                    <div class="variant-row">
+                        <select name="variant_category[]" class="size" style="padding: 8px 39px;" required>
+                            <option value="" style="color:#CCCCCC;">Select Category</option>
+                            <option value="Mens">Mens</option>
+                            <option value="Womens">Womens</option>
+                        </select>
+                        <select name="variant_size[]" class="size" style="padding: 8px 57px;" required>
+                            <option value="" style="color:#CCCCCC;">Select Size</option>
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
+                            <option value="XXXL">XXXL</option>
+                        </select>
+                        <input type="text" name="variant_color[]" placeholder="Color" required>
+                        <input type="text" name="variant_original_price[]" placeholder="Original Price (₹)" required>
+                        <input type="text" name="variant_discounted_price[]" placeholder="Discounted Price (₹)" required>
+                        <input type="text" name="variant_stocks[]" placeholder="Stocks" required>
+
+                        <!-- Four image upload boxes side by side -->
+                        <label>Upload Images for this variant</label>
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                        <input type="file" name="variant_images_0[]">
+                    </div>
+                </div>
+
+                <button type="button" class="add-var" onclick="addVariant()">+ Add More Variants</button>
+
+                <div class="center" style="margin-top: 20px;">
+                    <input type="submit" name="add-product" class="admin-btn" value="Add Product">
+                </div>
+            </form>
+        </div>
     </div>
 
-    <!-- Add New Product -->
-    <div class="admin-section" id="add-product" style="max-width: 600px; margin: 0 auto;">
-        <h2 style="padding-left:50px;">Add New Product</h2>
-        <form method="POST" enctype="multipart/form-data" style="padding:0 50px;">
-            <div class="form-group">
-                <label>Product Name</label>
-                <input type="text" name="name" required>
-            </div>
-            <div class="form-group">
-                <label>Price</label>
-                <input type="text" name="price" required>
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea name="description" rows="4"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Stock</label>
-                <input type="number" name="stock" required>
-            </div>
-            <div class="form-group">
-                <label>Category</label>
-                <input type="text" name="category" required>
-            </div>
-            <div class="form-group">
-                <label>How many colors?</label>
-                <input type="text" name="category" required>
-            </div>
-            <div class="form-group">
-                <label>Image</label>
-                <input type="file" name="image1" required>
-            </div>
-            <div class="form-group">
-                <label>Image</label>
-                <input type="file" name="image2" required>
-            </div>
-            <div class="form-group">
-                <label>Image</label>
-                <input type="file" name="image3" required>
-            </div>
-            <div class="form-group">
-                <label>Image</label>
-                <input type="file" name="image4" required>
-            </div>
-            <div class="form-group">
-                <label>Image</label>
-                <input type="file" name="image5" required>
-            </div>
-            <div class="form-group">
-                <label>Image</label>
-                <input type="file" name="image6" >
-            </div>
-            <div class="form-group">
-                <label>Image</label>
-                <input type="file" name="image7" >
-            </div>
-            <div class="center">
-                <input type="submit" name="add-product" class="admin-btn center" value="Add Product">
-            </div>
-            
-        </form>
-    </div>
-  </div>
+    <script>
+        function toggleSection(sectionId) {
+        const sections = document.querySelectorAll('.admin-section');
+        const buttons = document.querySelectorAll('.toggle-btn');
 
-  <script>
-    function toggleSection(sectionId) {
-      const sections = document.querySelectorAll('.admin-section');
-      const buttons = document.querySelectorAll('.toggle-btn');
+        sections.forEach(sec => sec.classList.remove('active'));
+        buttons.forEach(btn => btn.classList.remove('active'));
 
-      sections.forEach(sec => sec.classList.remove('active'));
-      buttons.forEach(btn => btn.classList.remove('active'));
+        document.getElementById(sectionId).classList.add('active');
+        event.target.classList.add('active');
+        }
 
-      document.getElementById(sectionId).classList.add('active');
-      event.target.classList.add('active');
-    }
-  </script>
+        let variantCount = 1;
+
+        function addVariant() {
+            const wrapper = document.getElementById('variant-wrapper');
+            const row = document.createElement('div');
+            row.className = 'variant-row';
+            row.innerHTML = `
+                <select name="variant_category[]" class="size" style="padding: 8px 39px;" required>
+                    <option value="" style="color:#CCCCCC;">Select Category</option>
+                    <option value="Mens">Mens</option>
+                    <option value="Womens">Womens</option>
+                </select>
+                <select name="variant_size[]" class="size" style="padding: 8px 57px;" required>
+                    <option value="" style="color:#CCCCCC;">Select Size</option>
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                    <option value="XXL">XXL</option>
+                    <option value="XXXL">XXXL</option>
+                </select>
+                <input type="text" name="variant_color[]" placeholder="Color" required>
+                <input type="text" name="variant_original_price[]" placeholder="Original Price (₹)" required>
+                <input type="text" name="variant_discounted_price[]" placeholder="Discounted Price (₹)" required>
+                <input type="text" name="variant_stocks[]" placeholder="Stocks" required>
+
+                <label>Upload Images for this variant</label>
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+                <input type="file" name="variant_images_${variantCount}[]" accept="image/*">
+
+                <button type="button" onclick="removeVariant(this)">✖</button>
+            `;
+            wrapper.appendChild(row);
+            variantCount++;
+        }
+
+        function removeVariant(button) {
+            button.parentElement.remove();
+        }
+    </script>
+
+    <script src="asset/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="asset/js/scripts.js"></script>
+    <script src="asset/js/simple-datatables@latest.js" crossorigin="anonymous"></script>
+    <script src="asset/js/datatables-simple-demo.js"></script>
 
 </body>
 </html>

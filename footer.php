@@ -24,23 +24,23 @@
 
             <div class="footer-links">
                 <h4>Company</h4>
-                <a href="about.html">About</a>
-                <a href="contact.html">Contact</a>
+                <a href="about">About</a>
+                <a href="contact">Contact</a>
             </div>
 
             <div class="footer-links">
                 <h4>Support</h4>
-                <a href="size.html">Size Guide</a>
-                <a href="shipping.html">Shipping Info</a>
-                <a href="return.html">Returns</a>
-                <a href="faq.html">FAQ</a>
+                <a href="size">Size Guide</a>
+                <a href="shipping">Shipping Info</a>
+                <a href="return">Returns</a>
+                <a href="faq">FAQ</a>
             </div>
 
             <div class="footer-links">
                 <h4>Legal</h4>
-                <a href="privacy.html">Privacy Policy</a>
-                <a href="terms.html">Terms Of Service</a>
-                <a href="cookie.html">Cookie Policy</a>
+                <a href="privacy">Privacy Policy</a>
+                <a href="terms">Terms Of Service</a>
+                <a href="cookie">Cookie Policy</a>
             </div>
         </div>
 
@@ -53,7 +53,7 @@
         <div class="footer-bottom">
             <p>
             &copy; 2024 Crabie. All rights reserved. Made with <span style="color: red">❤</span>
-            in India. <a href="about.html">About Us</a>
+            in India. <a href="about">About Us</a>
             </p>
         </div>
     </footer>

@@ -45,7 +45,7 @@
                         $_SESSION['admin-name']  = $row['admin_name'];
                         $_SESSION['admin-email'] = $row['admin_email'];
                         $_SESSION['admin-id']    = $row['admin_id'];
-                        header('location:admin-panel.php');
+                        header('location:admin-panel');
                     }
                     else{
                         $message = 'Wrong Password';

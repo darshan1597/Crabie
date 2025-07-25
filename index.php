@@ -19,7 +19,7 @@
             </p>
         </div>
       
-        <a href="shop.html"><button class="shop-collection">Shop Collection →</button></a>
+        <a href="shop"><button class="shop-collection">Shop Collection →</button></a>
     </div>
   </section>
 
@@ -49,7 +49,7 @@
                     <h1>
                         <span class="white-bold" style="font-size: xxx-large; line-height: 1;">Explore Our Winter Jackets</span>
                     </h1>
-                    <a href="shop.html"><button class="shop-collection">Shop →</button></a>
+                    <a href="shop"><button class="shop-collection">Shop →</button></a>
                 </div>
             </div>
             <div class="explore-box">
@@ -59,7 +59,7 @@
                     <h1>
                         <span class="white-bold" style="font-size: xxx-large; line-height: 1;">Men's and Women's Styles</span>
                     </h1>
-                    <a href="shop.html"><button class="shop-collection">Browse →</button></a>
+                    <a href="shop"><button class="shop-collection">Browse →</button></a>
                 </div>
             </div>
         </section>
@@ -116,7 +116,7 @@
                 <p>Every Crabie jacket is meticulously designed and crafted using premium materials. From the bustling streets of Mumbai to the serene mountains of Himachal, our jackets are your perfect companion for every adventure.</p>
             </span>
             
-            <a href="about.html"><button class="discover-btn">Discover Our Story →</button></a>
+            <a href="about"><button class="discover-btn">Discover Our Story →</button></a>
         </div>
         <div class="story-img">
             <img src="./images/crafted.png" alt="Jacket Back View">

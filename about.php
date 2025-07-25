@@ -3,75 +3,74 @@
     include("header.php");
 
 ?>
-    <style>
-        /* about story */
-            .brand-story-section {
-    padding: 80px 20px;
-    background-color: #fff;
-    text-align: center;
+<style>
+    /* about story */
+    .brand-story-section {
+        padding: 80px 20px;
+        background-color: #fff;
+        text-align: center;
     }
 
     .brand-container {
-    max-width: 900px;
-    margin: 0 auto;
-    color: #333;
+        max-width: 900px;
+        margin: 0 auto;
+        color: #333;
     }
 
     .brand-container h1 {
-    font-size: 36px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #1a1a1a;
+        font-size: 36px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #1a1a1a;
     }
 
     .brand-container h2 {
-    font-size: 18px;
-    font-weight: 500;
-    color: #555;
-    margin-bottom: 15px;
+        font-size: 18px;
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 15px;
     }
 
     .divider {
-    width: 40px;
-    height: 2px;
-    background-color: #e91e63;
-    margin: 20px auto;
+        width: 40px;
+        height: 2px;
+        background-color: #e91e63;
+        margin: 20px auto;
     }
 
     .brand-container p {
-    font-size: 16px;
-    line-height: 1.7;
-    color: #444;
-    margin-bottom: 20px;
+        font-size: 16px;
+        line-height: 1.7;
+        color: #444;
+        margin-bottom: 20px;
     }
     /* bg image about */
     .about-background {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: url('./images/about-2nd-jacket.avif') no-repeat center center/cover;
-    filter: blur(1px);
-    z-index: -1;
-    height: 100% ;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('./images/about-2nd-jacket.avif') no-repeat center center/cover;
+        filter: blur(1px);
+        z-index: -1;
+        height: 100% ;
     }
 
     /* slide show */
-    
+        
     .slideshow-container {
-      position: relative;
-      max-width: 800px;
-      margin: auto;
-      overflow: hidden;
-      height: 10%;
-      width: 40%;
-    }
-    
-    img {
-      width: 100%;
-      height: auto;
-      display: block;
+        position: relative;
+        max-width: 800px;
+        margin: auto;
+        overflow: hidden;
+        height: 10%;
+        width: 40%;
     }
 
-    </style>
+    img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+</style>
     <section class="brand-story-section">
         <div class="brand-container">
             <h1>The Crabie Story</h1>

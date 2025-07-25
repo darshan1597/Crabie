@@ -18,7 +18,7 @@
             <input type="hidden" name="_captcha" value="false">
             <input type="hidden" name="_template" value="box">
 
-            <input type="hidden" name="_next" value="http://localhost/crabie/contact.php">
+            <input type="hidden" name="_next" value="http://localhost/crabie/contact">
 
             <input type="text" name="name" placeholder="Your first name here" required />
             <input type="email" name="email" placeholder="Your email address here" required />
